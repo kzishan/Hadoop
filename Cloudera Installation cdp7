@@ -1,0 +1,96 @@
+*******************************************************************************
+	Delivering an Enterprise Data Hub in the cloud with Cloudera
+*******************************************************************************
+
+Start a instance with minimum 8 GB ram (preferably m4.large)
+
+In seccurity group - Select "Default" security group
+
+Edit Deafult security group as below
+all traffic - your-ip/32
+
+
+-----*** SSH in to the instance you created ***-----
+$ ssh -i /path/to/key_file.pem ubuntu@instance_hostname
+
+
+-----*** Update the server ***-----
+sudo apt-get update && sudo apt-get dist-upgrade -y
+
+
+*** Disable transparent huge pages  for cdp7  ***_____
+
+ sudo vi /etc/init.d/disable-transparent-hugepages
+
+#!/bin/sh
+### BEGIN INIT INFO
+#Provides:           disable-transparent-hugepages
+#Required-Start:     $local_fs
+#Required-Stop: 
+#Default-Start:       2 3 4 5 
+#Default-Stop:        0 1 6
+#Short-Description: Disable Linux transparent huge pages
+#Description: Disable Linux transparent huge pages, to improve
+
+### END INIT INFO
+
+case $1 in 
+  start)
+if [ -d /sys/kernel/mm/transparent hugepage ]; then
+  thp_path=/sys/kernel/mm/transparent hugepage  
+elif [ -d /sys/kernel/mm/redhat_transparent_hugepage ]; then
+  thp_path=/sys/kernel/mm/redhat_transparent hugepage
+else 
+  return 0
+fi
+
+echo 'never'> $(thp_path)/enabled 
+echo 'never'> $(thp_path)/defrag
+
+unset thp_path
+;;
+esac
+
+ sudo chmod 755 /etc/init.d/disable-transparent-hugepages
+
+ sudo update-rc.d disable-transparent-hugepages defaults
+
+>>Restart server
+
+-----*** Install NTP ***-----
+sudo apt-get install ntp -y 
+ sudo service ntp status
+## If it isn't running 
+ sudo service ntp start 
+
+
+-----*** Set Swappiness ***-----
+sudo sysctl -a | grep vm.swappiness
+sudo sysctl vm.swappiness=1
+
+### Note : Now, save the instance to an image, call it “Cloudera Manager” Make sure to 
+check “No reboot”
+
+
+-----*** Install and start CM ***-----
+
+SSH into cloudera-manager host
+
+
+wget https://archive.cloudera.com/cm7/7.4.4/cloudera-manager-installer.bin
+
+ chmod u+x cloudera-manager-installer.bin
+
+ sudo ./cloudera-manager-installer.bin
+
+
+## in browser "public_ip_of_cm:7180" 
+
+username : admin
+password : admin 
+
+## Note : in login credentials page 
+	  select user ubuntu 
+	  all users accept same private key (give the .pem key created for the instances)
+
+
